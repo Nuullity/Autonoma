@@ -16,26 +16,10 @@ navegador = webdriver.Chrome(service=servico)
 
 PageNum = 1
 
-def UserName():
-    url = navegador.current_url
-    parsed_url = urlparse(url)
-
-# Obtém a parte do caminho da URL
-    caminho = parsed_url.path
-
-# Divide o caminho usando "/" como delimitador
-    partes_do_caminho = caminho.split("/")
-
-# Se houver pelo menos duas partes, a segunda parte será "Nullity"
-    if len(partes_do_caminho) >= 2:
-        nome_de_usuario = partes_do_caminho[1]
-   
-    return  nome_de_usuario
 def ProjName(url):
     projName = url.split("/")[4]  # Split by "/" and access the 5th element
     return projName
 def RepoName():
-    
     time.sleep(0.5)
     url_atual = navegador.current_url
     projName = ProjName(url_atual)
@@ -60,11 +44,11 @@ def CsProjName(url_atual):
    return url_atual
 def IsCsProjThere():
     try:
-        csproj_element =WebDriverWait(navegador, 2).until(
+        csproj_element =WebDriverWait(navegador, 3).until(
         EC.presence_of_element_located((By.XPATH, '//a[contains(text(), "csproj")]')))
         csproj_href = csproj_element.get_attribute('href')
         navegador.get(csproj_href)
-        textarea_element = WebDriverWait(navegador, 0.5).until(
+        textarea_element = WebDriverWait(navegador, 3).until(
         EC.presence_of_element_located((By.ID, 'read-only-cursor-text-area'))
         ) 
         # Obtém o texto dentro do elemento <textarea>
@@ -93,7 +77,6 @@ def CheckLogin():
             return 1
     except NoSuchElementException:
         return 0
-
 def Login():
         input_element = navegador.find_element(By.ID, "login_field")
         input_element.clear()
@@ -107,39 +90,59 @@ def Login():
         password_element.send_keys(str(senha))
         submit_button = navegador.find_element(By.CLASS_NAME, "js-sign-in-button")  # Use a reliable identifier
         submit_button.click()
+def CheckDotFolder(check):
+    global index
+    if check == 1: 
+        index+=1
+#    index=0
+    while True:
+        xpath = "//*[@id='folder-row-" + str(index) + "']/td[2]/div/div/h3/div/a"
+        
+        try:
+            index += 1
+            folder = WebDriverWait(navegador, 3).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+            
+            title = folder.get_attribute("aria-label")
+            
+            if not re.match(r"^\.", title):
+                index=0
+                folder.click()
+                return "No"
+        except:
+            break  # Exit the loop if element is not found within the timeout
+        
+        #index += 1  # Increment index for the next iteration
 
 print("Insira o nome da sua organização.")
 Usuario = input()
-branch  = "master"
 ("=======================================================")
+print("Insira a branch que deseja procurar")
+branch =input()
 print("Como padrão iremos checar a branch: ", branch)
 
 navegador.get(str("https://github.com/orgs/"+ Usuario +"/repositories?q=&type=all&language=c%23&sort="))
-check = CheckLogin()
+CheckLogin()
 print("=======================================================")
 print("Conta logada com sucesso, procurando repositórios...")
 print("=======================================================")
-for i in range(1, 32, 1):
+for i in range(1, 31, 1):
+    index = 0
     navegador.get(str("https://github.com/orgs/"+ Usuario +"/repositories?q=&type=all&language=c%23&sort="))
 
-    Repository = WebDriverWait(navegador, 1).until(
+    Repository = WebDriverWait(navegador, 3).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="org-repositories"]/div/div/div[2]/ul/li['+str(i)+']/div/div[1]/div[1]/h3/a'))
     )
 
     Repository.click()
     IsThereCsProj = IsCsProjThere()
     if IsThereCsProj == "No":
-        folder = WebDriverWait(navegador, 3).until(
-        EC.element_to_be_clickable((By.XPATH, "//*[@id='folder-row-1']/td[2]/div/div/h3/div/a"))
-        )
-        folder.click()
+        CheckDotFolder(0)
         time.sleep(2)
         IsThereCsProj = IsCsProjThere()
         if IsThereCsProj == "No":
-            folder = WebDriverWait(navegador, 4).until(
-            EC.element_to_be_clickable((By.XPATH, "//*[@id='folder-row-1']/td[2]/div/div/h3/div/a"))
-            )
-            folder.click()
+            DotFolder = CheckDotFolder(1)
             time.sleep(2)
             IsThereCsProj = IsCsProjThere()
             if IsThereCsProj == "No":
